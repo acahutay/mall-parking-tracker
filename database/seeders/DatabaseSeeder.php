@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ParkingSection;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,11 +16,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        ParkingSection::create([
+            'floor' => '1',
+            'section_name' => 'A',
+            'max_slots' => 5,
+            'available_slots' => 5,
+        ]);
+
+        ParkingSection::create([
+            'floor' => '1',
+            'section_name' => 'B',
+            'max_slots' => 5,
+            'available_slots' => 5,
+        ]);
+
+        ParkingSection::create([
+            'floor' => '2',
+            'section_name' => 'C',
+            'max_slots' => 5,
+            'available_slots' => 5,
         ]);
     }
 }
