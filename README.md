@@ -5,7 +5,7 @@ This is a very simple parking tracker app for mall guards.
 Main idea:
 - Guard checks if section is available
 - Guard gives driver a card
-- If full, driver can not park
+- If full, driver cannot park
 - On checkout, guard updates the slot back
 
 ## Stack

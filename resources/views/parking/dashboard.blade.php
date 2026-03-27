@@ -103,7 +103,7 @@
 
     <div class="card">
         <h2>Park a Driver</h2>
-        <form method="POST" action="/park">
+        <form method="POST" action="{{ route('park') }}">
             @csrf
             <label for="section_id">Section</label>
             <select id="section_id" name="section_id">
@@ -123,7 +123,7 @@
 
     <div class="card">
         <h2>Checkout a Driver</h2>
-        <form method="POST" action="/checkout">
+        <form method="POST" action="{{ route('checkout') }}">
             @csrf
             <label for="card_id">Parking Card ID</label>
             <input id="card_id" name="card_id" placeholder="Card ID">

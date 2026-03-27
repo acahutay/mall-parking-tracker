@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('parking_cards', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('parking_section_id');
+            $table->foreignId('parking_section_id')->constrained('parking_sections');
             $table->string('plate_number')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('checked_out_at')->nullable();
             $table->timestamps();
+            $table->index(['parking_section_id', 'is_active']);
         });
     }
 

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ParkingCard;
 use App\Models\ParkingSection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ParkingController extends Controller
 {
@@ -12,7 +14,7 @@ class ParkingController extends Controller
     {
         return view('parking.dashboard', [
             'sections' => ParkingSection::orderBy('floor')->orderBy('section_name')->get(),
-            'activeCards' => ParkingCard::where('is_active', true)->latest()->get(),
+            'activeCards' => ParkingCard::where('is_active', true)->latest()->paginate(50),
             'lastFiveCards' => ParkingCard::latest()->take(5)->get(),
         ]);
     }
@@ -38,7 +40,7 @@ class ParkingController extends Controller
     {
         $result = $this->handlePark($request);
 
-        return redirect('/')->with('status', $result['message']);
+        return redirect(route('dashboard'))->with('status', $result['message']);
     }
 
     public function checkout(Request $request)
@@ -55,78 +57,85 @@ class ParkingController extends Controller
     {
         $result = $this->handleCheckout($request);
 
-        return redirect('/')->with('status', $result['message']);
+        return redirect(route('dashboard'))->with('status', $result['message']);
     }
 
     private function handlePark(Request $request): array
     {
-        $section = ParkingSection::find($request->section_id);
+        $request->validate([
+            'section_id' => ['required', 'integer', 'exists:parking_sections,id'],
+            'plate_number' => ['nullable', 'string', 'max:20'],
+        ]);
 
-        if (! $section) {
-            return [
-                'message' => 'Section not found.',
-                'status' => 404,
-                'card_id' => null,
-                'floor' => null,
-                'section' => null,
-            ];
-        }
+        return DB::transaction(function () use ($request) {
+            $section = ParkingSection::lockForUpdate()->find($request->section_id);
 
-        if ($section->available_slots <= 0) {
+            if ($section->available_slots <= 0) {
+                return [
+                    'message' => 'No available parking space in this section.',
+                    'status' => 422,
+                    'card_id' => null,
+                    'floor' => $section->floor,
+                    'section' => $section->section_name,
+                ];
+            }
+
+            $section->available_slots = $section->available_slots - 1;
+            $section->save();
+
+            $card = ParkingCard::create([
+                'parking_section_id' => $section->id,
+                'plate_number' => $request->plate_number,
+                'is_active' => true,
+            ]);
+
             return [
-                'message' => 'No available parking space in this section.',
-                'status' => 422,
-                'card_id' => null,
+                'message' => 'Parking granted.',
+                'status' => 200,
+                'card_id' => $card->id,
                 'floor' => $section->floor,
                 'section' => $section->section_name,
             ];
-        }
-
-        $card = ParkingCard::create([
-            'parking_section_id' => $section->id,
-            'plate_number' => $request->plate_number,
-            'is_active' => true,
-        ]);
-
-        $section->available_slots = $section->available_slots - 1;
-        $section->save();
-
-        return [
-            'message' => 'Parking granted.',
-            'status' => 200,
-            'card_id' => $card->id,
-            'floor' => $section->floor,
-            'section' => $section->section_name,
-        ];
+        });
     }
 
     private function handleCheckout(Request $request): array
     {
-        $card = ParkingCard::find($request->card_id);
+        $request->validate([
+            'card_id' => [
+                'required',
+                'integer',
+                Rule::exists('parking_cards', 'id')->where('is_active', true),
+            ],
+        ]);
 
-        if (! $card || ! $card->is_active) {
+        return DB::transaction(function () use ($request) {
+            $card = ParkingCard::lockForUpdate()->find($request->card_id);
+
+            if (! $card || ! $card->is_active) {
+                return [
+                    'message' => 'Card not found or already checked out.',
+                    'status' => 404,
+                    'section_id' => null,
+                ];
+            }
+
+            $card->is_active = false;
+            $card->checked_out_at = now();
+            $card->save();
+
+            $section = ParkingSection::lockForUpdate()->find($card->parking_section_id);
+
+            if ($section) {
+                $section->available_slots = min($section->available_slots + 1, $section->max_slots);
+                $section->save();
+            }
+
             return [
-                'message' => 'Card not found or already checked out.',
-                'status' => 404,
-                'section_id' => null,
+                'message' => 'Checkout successful.',
+                'status' => 200,
+                'section_id' => $card->parking_section_id,
             ];
-        }
-
-        $section = ParkingSection::find($card->parking_section_id);
-
-        $card->is_active = false;
-        $card->checked_out_at = now();
-        $card->save();
-
-        if ($section) {
-            $section->available_slots = $section->available_slots + 1;
-            $section->save();
-        }
-
-        return [
-            'message' => 'Checkout successful.',
-            'status' => 200,
-            'section_id' => $card->parking_section_id,
-        ];
+        });
     }
 }

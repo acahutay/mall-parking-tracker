@@ -95,5 +95,16 @@ class ParkingFlowTest extends TestCase
             'message' => 'Checkout successful.',
             'section_id' => $section->id,
         ]);
+
+        $this->assertDatabaseHas('parking_cards', [
+            'id' => $cardId,
+            'is_active' => false,
+        ]);
+
+        $card = \App\Models\ParkingCard::find($cardId);
+        $this->assertNotNull($card->checked_out_at);
+
+        $section->refresh();
+        $this->assertEquals(3, $section->available_slots);
     }
 }

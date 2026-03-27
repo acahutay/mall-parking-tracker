@@ -17,4 +17,12 @@ class ParkingCard extends Model
     {
         return $this->belongsTo(ParkingSection::class);
     }
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'checked_out_at' => 'datetime',
+        ];
+    }
 }

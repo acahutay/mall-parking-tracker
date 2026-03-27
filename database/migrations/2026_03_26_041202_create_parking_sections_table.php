@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('floor');
             $table->string('section_name');
-            $table->integer('max_slots')->default(5);
-            $table->integer('available_slots')->default(5);
+            $table->unsignedInteger('max_slots')->default(5);
+            $table->unsignedInteger('available_slots')->default(5);
             $table->timestamps();
         });
     }
