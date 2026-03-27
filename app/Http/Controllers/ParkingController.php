@@ -61,7 +61,6 @@ class ParkingController extends Controller
     private function handlePark(Request $request): array
     {
         $section = ParkingSection::find($request->section_id);
-
         if (! $section) {
             return [
                 'message' => 'Section not found.',
